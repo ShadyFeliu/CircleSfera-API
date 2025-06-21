@@ -20,6 +20,22 @@ httpServer.on('request', (req, res) => {
     return;
   }
   
+  // Add root endpoint to prevent H12 timeouts
+  if (req.url === '/' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      message: 'CircleSfera API Server',
+      version: '1.0.0',
+      status: 'running',
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        health: '/health',
+        websocket: 'WebSocket connection for real-time chat'
+      }
+    }));
+    return;
+  }
+  
   // Let Socket.IO handle other requests
   return;
 });
