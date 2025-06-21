@@ -5,18 +5,7 @@ import * as dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-const httpServer = createServer((req, res) => {
-  if (req.url === '/' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('API CircleSfera funcionando');
-    return;
-  }
-  if (req.url === '/health' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', timestamp: new Date() }));
-    return;
-  }
-});
+const httpServer = createServer();
 
 const io = new Server(httpServer, {
   cors: {
@@ -31,6 +20,40 @@ const io = new Server(httpServer, {
     credentials: true,
     maxAge: 86400
   }
+});
+
+// Add HTTP endpoints for health checks AFTER Socket.IO initialization
+httpServer.on('request', (req, res) => {
+  if (req.url === '/health' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      connections: io.engine.clientsCount
+    }));
+    return;
+  }
+  
+  // Add root endpoint to prevent H12 timeouts
+  if (req.url === '/' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      message: 'CircleSfera API Server',
+      version: '1.0.0',
+      status: 'running',
+      timestamp: new Date().toISOString(),
+      connections: io.engine.clientsCount,
+      endpoints: {
+        health: '/health',
+        websocket: 'WebSocket connection for real-time chat'
+      }
+    }));
+    return;
+  }
+  
+  // Let Socket.IO handle other requests
+  return;
 });
 
 const log = (message: string, data?: any) => {
