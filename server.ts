@@ -6,24 +6,32 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const httpServer = createServer((req, res) => {
-  // Simple root endpoint to prevent H12 timeouts
-  if (req.url === '/' && req.method === 'GET') {
+  // Responder a GET y HEAD en la raíz
+  if ((req.url === '/' && (req.method === 'GET' || req.method === 'HEAD'))) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      message: 'CircleSfera API Server',
-      status: 'running',
-      timestamp: new Date().toISOString()
-    }));
+    // Para HEAD no se envía body, solo headers
+    if (req.method === 'GET') {
+      res.end(JSON.stringify({
+        message: 'CircleSfera API Server',
+        status: 'running',
+        timestamp: new Date().toISOString()
+      }));
+    } else {
+      res.end();
+    }
     return;
   }
-  
-  // Health check endpoint
-  if (req.url === '/health' && req.method === 'GET') {
+  // Responder a GET y HEAD en /health
+  if ((req.url === '/health' && (req.method === 'GET' || req.method === 'HEAD'))) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      status: 'ok',
-      timestamp: new Date().toISOString()
-    }));
+    if (req.method === 'GET') {
+      res.end(JSON.stringify({
+        status: 'ok',
+        timestamp: new Date().toISOString()
+      }));
+    } else {
+      res.end();
+    }
     return;
   }
 });
