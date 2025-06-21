@@ -1,10 +1,14 @@
 import { createServer } from "http";
 import { Server } from "socket.io";
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
-    origin: [
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
       "https://circlesfera.com",
       "https://www.circlesfera.com",
       "https://circlesfera.vercel.app",
@@ -14,6 +18,27 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"]
   }
 });
+
+// Rate limiting maps
+const connectionCounts = new Map<string, number>();
+const connectionTimestamps = new Map<string, number[]>();
+
+// Constants from environment
+const MAX_CONNECTIONS = parseInt(process.env.MAX_CONNECTIONS_PER_IP || '100', 10);
+const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10);
+
+// Rate limiting function
+const isRateLimited = (ip: string): boolean => {
+  const now = Date.now();
+  const timestamps = connectionTimestamps.get(ip) || [];
+  
+  // Clean old timestamps
+  const validTimestamps = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW);
+  connectionTimestamps.set(ip, validTimestamps);
+  
+  return validTimestamps.length >= RATE_LIMIT_MAX;
+};
 
 const interestQueues = new Map<string, string[]>();
 const genericQueue: string[] = [];
@@ -127,7 +152,31 @@ const endChat = (socketId: string) => {
 }
 
 io.on("connection", (socket) => {
-  console.log(`Usuario conectado: ${socket.id}`);
+  const clientIp = socket.handshake.address;
+  console.log(`Usuario conectado: ${socket.id} desde IP: ${clientIp}`);
+  
+  // Check rate limiting
+  if (isRateLimited(clientIp)) {
+    console.log(`Rate limit exceeded for IP: ${clientIp}`);
+    socket.emit('error', { message: 'Rate limit exceeded. Please try again later.' });
+    socket.disconnect();
+    return;
+  }
+  
+  // Update connection counts
+  const currentConnections = connectionCounts.get(clientIp) || 0;
+  if (currentConnections >= MAX_CONNECTIONS) {
+    console.log(`Maximum connections exceeded for IP: ${clientIp}`);
+    socket.emit('error', { message: 'Maximum connections exceeded.' });
+    socket.disconnect();
+    return;
+  }
+  connectionCounts.set(clientIp, currentConnections + 1);
+  
+  // Update rate limiting
+  const timestamps = connectionTimestamps.get(clientIp) || [];
+  timestamps.push(Date.now());
+  connectionTimestamps.set(clientIp, timestamps);
   
   // Verificar si el usuario está baneado
   if (isUserBanned(socket.id)) {
@@ -196,7 +245,13 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    const clientIp = socket.handshake.address;
     console.log(`Usuario desconectado: ${socket.id}`);
+    
+    // Update connection counts
+    const connections = connectionCounts.get(clientIp) || 1;
+    connectionCounts.set(clientIp, Math.max(0, connections - 1));
+    
     endChat(socket.id);
     cleanUpUserFromQueues(socket.id);
     userInterests.delete(socket.id);
@@ -208,5 +263,6 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Servidor de señalización escuchando en el puerto ${PORT}`);
-  console.log(`🌍 CORS configurado para: circlesfera.com, www.circlesfera.com`);
+  console.log(`🌍 CORS configurado para: ${process.env.ALLOWED_ORIGINS || 'dominios por defecto'}`);
+  console.log(`🔒 Seguridad: Máx. ${MAX_CONNECTIONS} conexiones por IP, límite de ${RATE_LIMIT_MAX} peticiones cada ${RATE_LIMIT_WINDOW/1000}s`);
 });
