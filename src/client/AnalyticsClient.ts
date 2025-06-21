@@ -199,6 +199,10 @@ export class AnalyticsClient extends EventEmitter {
       );
     }
   }
+
+  public get isConnected(): boolean {
+    return this.socket?.connected ?? false;
+  }
 }
 
 // Usage example:

@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import Client from 'socket.io-client';
+import { io } from 'socket.io-client';
 import { AddressInfo } from 'net';
 
 describe('WebSocket Server', () => {
@@ -14,7 +14,7 @@ describe('WebSocket Server', () => {
     io = new Server(httpServer);
     httpServer.listen(() => {
       const port = (httpServer.address() as AddressInfo).port;
-      clientSocket = new Client(`http://localhost:${port}`);
+      clientSocket = io(`http://localhost:${port}`);
       io.on('connection', (socket) => {
         serverSocket = socket;
       });

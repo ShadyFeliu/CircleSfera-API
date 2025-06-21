@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import Client from 'socket.io-client';
+import { io } from 'socket.io-client';
 import { AddressInfo } from 'net';
 
 describe('Matchmaking Integration Tests', () => {
@@ -26,7 +26,7 @@ describe('Matchmaking Integration Tests', () => {
 
   beforeEach((done) => {
     const port = (httpServer.address() as AddressInfo).port;
-    const client = new Client(`http://localhost:${port}`);
+    const client = io(`http://localhost:${port}`);
     clientSockets.push(client);
     client.on('connect', done);
   });
@@ -45,7 +45,7 @@ describe('Matchmaking Integration Tests', () => {
     user1.emit('find_partner', { interests, ageFilter: '18-25' });
     user2.emit('find_partner', { interests, ageFilter: '18-25' });
 
-    user1.on('partner', (data) => {
+    user1.on('partner', (data: any) => {
       expect(data.initiator).toBe(true);
       done();
     });
@@ -87,7 +87,7 @@ describe('Matchmaking Integration Tests', () => {
     const MAX_REQUESTS = 10;
     let errorReceived = false;
 
-    user.on('error', (data) => {
+    user.on('error', (data: any) => {
       expect(data.message).toContain('Rate limit exceeded');
       errorReceived = true;
     });
@@ -154,9 +154,9 @@ describe('Matchmaking Integration Tests', () => {
       }
     };
 
-    user1.on('partner', (data) => checkMatch('user1', data.id));
-    user2.on('partner', (data) => checkMatch('user2', data.id));
-    user3.on('partner', (data) => checkMatch('user3', data.id));
+    user1.on('partner', (data: any) => checkMatch('user1', data.id));
+    user2.on('partner', (data: any) => checkMatch('user2', data.id));
+    user3.on('partner', (data: any) => checkMatch('user3', data.id));
   });
 
   test('handles reconnection attempts properly', (done) => {

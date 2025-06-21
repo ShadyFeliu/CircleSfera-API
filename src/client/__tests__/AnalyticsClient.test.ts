@@ -134,6 +134,30 @@ describe('AnalyticsClient', () => {
       testEnv.server.emit('connect');
       testEnv.server.emit('disconnect');
     });
+
+    it('should correctly report connection status', () => {
+      const client = new AnalyticsClient({ url: 'http://localhost:3001', apiKey: 'test' });
+      expect(client.isConnected).toBe(false);
+
+      // This is a simplified mock for testing the property
+      Object.defineProperty(client, 'socket', {
+        value: { connected: true },
+        writable: true,
+        configurable: true,
+      });
+
+      expect(client.isConnected).toBe(true);
+      
+      client.disconnect();
+      // After disconnect, the socket is nulled out
+      expect(client.isConnected).toBe(false);
+    });
+
+    it('should throw an error if subscribing when not connected', () => {
+      const client = new AnalyticsClient({ url: 'http://localhost:3001', apiKey: 'test' });
+      expect(client.isConnected).toBe(false);
+      expect(() => client.subscribe({ timeframe: '1h', interval: 1000 })).toThrow('Client not connected');
+    });
   });
 
   describe('Subscription Management', () => {
