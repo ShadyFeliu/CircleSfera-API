@@ -1,5 +1,4 @@
 import { Alert } from './alertNotifier';
-import { logger } from './logger';
 import { alertPatternAnalyzer } from './alertPatternAnalyzer';
 import { predictionAccuracyTracker } from './predictionAccuracy';
 import fs from 'fs/promises';
@@ -115,7 +114,7 @@ class PredictionDevTools {
     const analysis = {
       overallAccuracy: metrics.averageAccuracy,
       confidenceDistribution: this.calculateConfidenceDistribution(patterns),
-      patternEffectiveness: this.analyzePatternEffectiveness(metrics.byPattern),
+      patternEffectiveness: this.analyzePatternEffectiveness(metrics.byPattern || []),
       recommendations: this.generateRecommendations(metrics, patterns)
     };
 
@@ -141,6 +140,8 @@ class PredictionDevTools {
   }
 
   private analyzePatternEffectiveness(patternMetrics: any[]) {
+    if (!patternMetrics) return [];
+    
     return patternMetrics.map(pattern => ({
       patternId: pattern.patternId,
       effectiveness: {

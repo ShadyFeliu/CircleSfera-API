@@ -1,130 +1,129 @@
-import express from 'express';
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { monitoring } from './utils/monitoring';
-import { securityHeaders } from './security-headers';
-import { logger, logWebSocketEvent, logError, logUserAction } from './utils/logger';
-import morgan from 'morgan';
-import * as metricsController from './api/metrics';
-import * as predictionsController from './api/predictions';
-import * as analyticsController from './api/analytics';
-import { alertDashboardLimiter } from './middleware/alertRateLimiter';
+import * as dotenv from 'dotenv';
 
-const app = express();
-const httpServer = createServer(app);
+// Load environment variables
+dotenv.config();
 
-// Add security headers middleware
-app.use((req, res, next) => {
-  Object.entries(securityHeaders.securityHeaders).forEach(([key, value]) => {
-    res.setHeader(key, value);
-  });
-  next();
-});
-
-// Add logging middleware
-app.use(morgan('combined', { stream: logger.stream }));
-
-// API routes
-app.get('/health', metricsController.getHealthMetrics);
-
-// Protected metrics routes
-app.use('/api/metrics', (req, res, next) => {
-  const apiKey = req.headers['x-api-key'];
-  if (apiKey !== process.env.METRICS_API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
-});
-
-app.get('/api/metrics', metricsController.getMetrics);
-app.get('/api/metrics/errors', metricsController.getRecentErrors);
-
-// Import prediction validators
-import { validateApiKey, validateTimeframe, validateTestData } from './middleware/predictionValidator';
-
-// Predictions API routes
-app.get('/api/predictions',
-  validateApiKey,
-  alertDashboardLimiter,
-  validateTimeframe,
-  predictionsController.getPredictions
-);
-
-app.get('/api/predictions/accuracy',
-  validateApiKey,
-  alertDashboardLimiter,
-  predictionsController.getPredictionAccuracy
-);
-
-app.get('/api/analytics/dashboard',
-  validateApiKey,
-  alertDashboardLimiter,
-  validateTimeframe,
-  analyticsController.getAnalyticsDashboard
-);
-
-// Development-only routes for testing prediction system
-if (process.env.NODE_ENV !== 'production') {
-  app.use(express.json());
-  app.post('/dev/generate-test-data', validateTestData, predictionsController.generateTestData);
-}
-
-// Socket.IO setup
+const httpServer = createServer();
 const io = new Server(httpServer, {
-  cors: securityHeaders.corsOptions
+  cors: {
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'https://circlesfera.com',
+      'https://www.circlesfera.com',
+      'https://circlesfera.vercel.app',
+      'http://localhost:3000'
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    maxAge: 86400
+  }
 });
+
+// Basic logging
+const log = (message: string, data?: any) => {
+  console.log(`[${new Date().toISOString()}] ${message}`, data || '');
+};
+
+// User management
+const userPairs = new Map<string, string>();
+const userInterests = new Map<string, string[]>();
+const interestQueues = new Map<string, string[]>();
+const genericQueue: string[] = [];
+
+// Find partner logic
+const findPartnerFor = (socketId: string) => {
+  const interests = userInterests.get(socketId) || [];
+  let partnerId: string | undefined;
+
+  // 1. Buscar en colas de intereses
+  for (const interest of interests) {
+    const queue = interestQueues.get(interest);
+    if (queue && queue.length > 0) {
+      partnerId = queue.shift()!;
+      break;
+    }
+  }
+
+  // 2. Si no hay match en intereses, buscar en la cola genérica
+  if (!partnerId && genericQueue.length > 0) {
+    partnerId = genericQueue.shift()!;
+  }
+
+  // 3. Si encontramos pareja, los emparejamos
+  if (partnerId) {
+    log(`Emparejando ${socketId} y ${partnerId}`);
+    userPairs.set(socketId, partnerId);
+    userPairs.set(partnerId, socketId);
+    
+    // Limpiar al partner de cualquier otra cola
+    cleanUpUserFromQueues(partnerId);
+
+    io.to(socketId).emit("partner", { id: partnerId, initiator: true });
+    io.to(partnerId).emit("partner", { id: partnerId, initiator: false });
+  } 
+  // 4. Si no, a la cola
+  else {
+    log(`Usuario ${socketId} se pone a la espera con intereses:`, interests);
+    if (interests.length > 0) {
+      interests.forEach(interest => {
+        if (!interestQueues.has(interest)) interestQueues.set(interest, []);
+        interestQueues.get(interest)!.push(socketId);
+      });
+    } else {
+      genericQueue.push(socketId);
+    }
+  }
+};
+
+const cleanUpUserFromQueues = (socketId: string) => {
+  const genericIndex = genericQueue.indexOf(socketId);
+  if (genericIndex > -1) genericQueue.splice(genericIndex, 1);
+  interestQueues.forEach(queue => {
+    const index = queue.indexOf(socketId);
+    if (index > -1) queue.splice(index, 1);
+  });
+};
+
+const endChat = (socketId: string) => {
+  const partnerId = userPairs.get(socketId);
+  if (partnerId) {
+    log(`Finalizando chat entre ${socketId} y ${partnerId}`);
+    io.to(partnerId).emit("partner_disconnected");
+    userPairs.delete(partnerId);
+  }
+  userPairs.delete(socketId);
+};
 
 io.on("connection", (socket) => {
-  monitoring.recordWebSocketConnection();
-  logWebSocketEvent('connection', socket.id);
+  log(`Usuario conectado: ${socket.id}`);
   
-  socket.on('disconnect', () => {
-    monitoring.recordWebSocketDisconnection();
-    logWebSocketEvent('disconnect', socket.id);
+  socket.on("find_partner", ({ interests, ageFilter }: { interests: string[]; ageFilter?: string }) => {
+    log('Usuario buscando pareja', { socketId: socket.id, interests, ageFilter });
+    userInterests.set(socket.id, interests);
+    findPartnerFor(socket.id);
+  });
+  
+  socket.on("signal", (data) => {
+    io.to(data.to).emit("signal", { from: socket.id, signal: data.signal });
   });
 
-  socket.on('error', (error) => {
-    monitoring.recordWebSocketError();
-    logError(error, { socketId: socket.id });
+  socket.on('get_user_count', () => {
+    const count = io.engine.clientsCount;
+    socket.emit('user_count', count);
   });
 
-  socket.on("find_partner", (data) => {
-    monitoring.recordWebSocketMessage();
-    logUserAction('find_partner', socket.id, data);
-    // ... rest of the handler
+  socket.on("disconnect", () => {
+    log(`Usuario desconectado: ${socket.id}`);
+    endChat(socket.id);
+    cleanUpUserFromQueues(socket.id);
+    userInterests.delete(socket.id);
   });
 });
-
-// Error handling
-process.on('uncaughtException', (error) => {
-  logError(error, { type: 'uncaughtException' });
-  monitoring.recordWebSocketError();
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logError(reason instanceof Error ? reason : new Error(String(reason)), {
-    type: 'unhandledRejection',
-    promise
-  });
-  monitoring.recordWebSocketError();
-});
-
-// Initialize prediction utilities
-import { predictionNotifier } from './utils/predictionNotifier';
-import { predictionAccuracyTracker } from './utils/predictionAccuracy';
-
-// Initialize WebSocket analytics handler
-import { AnalyticsWebSocketHandler } from './websocket/analyticsHandler';
-const analyticsHandler = new AnalyticsWebSocketHandler(io);
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
-  logger.info(`🚀 Servidor de señalización iniciado`, {
-    port: PORT,
-    environment: process.env.NODE_ENV,
-    security: {
-      headers: Object.keys(securityHeaders.securityHeaders).length,
-      cors: securityHeaders.corsOptions.origin
-    }
-  });
+  log(`🚀 Servidor de señalización iniciado en puerto ${PORT}`);
+  log(`🌍 CORS configurado para: ${process.env.ALLOWED_ORIGINS || 'dominios por defecto'}`);
 });

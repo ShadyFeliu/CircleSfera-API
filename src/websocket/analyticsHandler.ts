@@ -1,4 +1,4 @@
-import { Server, Socket } from 'socket.io';
+import { Server, Socket, Namespace } from 'socket.io';
 import { predictionAnalytics } from '../utils/predictionAnalytics';
 import { alertNotifier } from '../utils/alertNotifier';
 import { logger } from '../utils/logger';
@@ -12,7 +12,7 @@ interface AnalyticsSubscription {
 
 export class AnalyticsWebSocketHandler {
   private subscriptions: Map<string, AnalyticsSubscription> = new Map();
-  private updateIntervals: Map<string, NodeJS.Timer> = new Map();
+  private updateIntervals: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(private io: Server) {
     const analyticsNamespace = this.io.of('/analytics');
@@ -21,7 +21,7 @@ export class AnalyticsWebSocketHandler {
     this.setupHandlers(analyticsNamespace);
   }
 
-  private setupHandlers(namespace: Server) {
+  private setupHandlers(namespace: Namespace) {
     namespace.on('connection', (socket: Socket) => {
       logger.info('Analytics client connected', { socketId: socket.id });
 
@@ -152,7 +152,7 @@ export class AnalyticsWebSocketHandler {
         summary: {
           totalAlerts: alerts.length,
           trend: timeSeries.trend,
-          hasSeasonality: Object.values(timeSeries.seasonality).some(v => v),
+          hasSeasonality: Object.values(timeSeries.seasonality || {}).some(v => v),
           strongPatterns: patterns.length
         },
         timeSeries,

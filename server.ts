@@ -15,7 +15,10 @@ const io = new Server(httpServer, {
       "http://localhost:3000",
       "http://192.168.1.37:3000"
     ],
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    maxAge: 86400
   }
 });
 

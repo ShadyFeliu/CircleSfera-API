@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node build/server.js",
-    "dev": "tsx server.ts",
+    "dev": "tsx src/server.ts",
     "postinstall": "npm run build && npm run create-log-dirs",
     "test": "jest",
     "test:watch": "jest --watch",

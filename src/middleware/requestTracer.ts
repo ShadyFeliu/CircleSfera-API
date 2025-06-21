@@ -1,52 +1,55 @@
 import { Request, Response, NextFunction } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
 
-declare global {
-  namespace Express {
-    interface Request {
-      traceId: string;
-      startTime: number;
-    }
-  }
+interface TraceData {
+  requestId: string;
+  timestamp: number;
+  method: string;
+  url: string;
+  ip: string;
+  userAgent?: string;
+  duration?: number;
 }
 
 export const requestTracer = (req: Request, res: Response, next: NextFunction) => {
-  // Generate trace ID
-  req.traceId = req.headers['x-request-id'] as string || uuidv4();
-  req.startTime = Date.now();
+  const startTime = Date.now();
+  const requestId = generateRequestId();
+  
+  const traceData: TraceData = {
+    requestId,
+    timestamp: startTime,
+    method: req.method,
+    url: req.url,
+    ip: req.ip || 'unknown',
+    userAgent: req.get('User-Agent') || undefined
+  };
 
-  // Add trace ID to response headers
-  res.setHeader('X-Request-ID', req.traceId);
+  // Add request ID to response headers
+  res.setHeader('X-Request-ID', requestId);
 
   // Log request start
-  logger.info('Request started', {
-    traceId: req.traceId,
-    method: req.method,
-    path: req.path,
-    ip: req.ip,
-    userAgent: req.headers['user-agent']
-  });
+  logger.info('Request started', traceData);
 
   // Log response on finish
   res.on('finish', () => {
-    const duration = Date.now() - req.startTime;
+    const duration = Date.now() - startTime;
+    traceData.duration = duration;
+
     logger.info('Request completed', {
-      traceId: req.traceId,
-      method: req.method,
-      path: req.path,
+      ...traceData,
       statusCode: res.statusCode,
-      duration,
-      ip: req.ip
+      contentLength: res.get('Content-Length')
     });
   });
 
   next();
 };
 
+const generateRequestId = (): string => {
+  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
 export const getTraceContext = (req: Request) => ({
-  traceId: req.traceId,
-  path: req.path,
-  method: req.method,
-  startTime: req.startTime
+  requestId: req.headers['x-request-id'] as string || 'unknown',
+  timestamp: Date.now()
 });

@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { alertProcessor } from './alertProcessor';
 
 export interface Alert {
   type: string;
