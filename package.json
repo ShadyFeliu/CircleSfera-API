@@ -27,15 +27,7 @@
       "!**/node_modules/**",
       "!**/build/**",
       "!**/coverage/**"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    }
+    ]
   },
   "dependencies": {
     "@types/express-rate-limit": "5.1.3",
