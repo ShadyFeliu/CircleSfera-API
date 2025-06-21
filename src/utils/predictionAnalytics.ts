@@ -201,7 +201,7 @@ export class PredictionAnalytics {
       if (trend === 'decreasing') value *= 0.9;
 
       // Apply seasonality
-      if (seasonality.daily) {
+      if (seasonality && seasonality.daily) {
         value *= this.calculateSeasonalFactor(new Date(timestamp).getHours());
       }
 

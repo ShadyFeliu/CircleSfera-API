@@ -185,8 +185,10 @@ class AlertPatternAnalyzer {
       
       // Update prediction
       if (existing.occurrences >= this.MIN_PATTERN_OCCURRENCES) {
-        const avgTimeBetween = (existing.lastSeen - existing.prediction?.nextExpected || 0) / 
-                             (existing.occurrences - 1);
+        let avgTimeBetween = 0;
+        if (existing.prediction?.nextExpected !== undefined) {
+          avgTimeBetween = (existing.lastSeen - existing.prediction.nextExpected) / (existing.occurrences - 1);
+        }
         existing.prediction = {
           nextExpected: existing.lastSeen + avgTimeBetween,
           confidence: Math.min(0.5 + (existing.occurrences * 0.1), 0.9)

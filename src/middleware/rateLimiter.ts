@@ -1,4 +1,5 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { Options } from 'express-rate-limit';
+import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 
 // Base rate limiter configuration
@@ -11,7 +12,7 @@ const createLimiter = (options: {
     windowMs: options.windowMs,
     max: options.max,
     message: { error: options.message },
-    handler: (req, res, next, options) => {
+    handler: (req: Request, res: Response, next: NextFunction, options: Options) => {
       logger.warn('Rate limit exceeded', {
         ip: req.ip,
         path: req.path,
@@ -20,10 +21,10 @@ const createLimiter = (options: {
       });
       res.status(429).json(options.message);
     },
-    skip: (req) => {
+    skip: (req: Request) => {
       // Skip rate limiting for health checks from known monitoring services
       const monitoringIPs = process.env.MONITORING_IPS?.split(',') || [];
-      return req.path === '/health' && monitoringIPs.includes(req.ip);
+      return req.path === '/health' && monitoringIPs.includes(req.ip ?? '');
     }
   });
 };

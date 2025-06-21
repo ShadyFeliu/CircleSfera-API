@@ -108,7 +108,10 @@ export const applyWsRateLimiting = (socket: Socket, next: (err?: Error) => void)
   }
 
   // Add rate limit check to all incoming events
+  // @ts-ignore - Accessing private property 'onevent' from socket.io for event interception
+  // This is necessary for rate limiting WebSocket events but may break in future socket.io versions
   const originalOnevent = socket.onevent;
+  // @ts-ignore - Overriding private property 'onevent' from socket.io
   socket.onevent = function(this: Socket, packet: any) {
     if (!wsRateLimiter.checkLimit(this)) {
       this.emit('error', { message: 'Rate limit exceeded' });

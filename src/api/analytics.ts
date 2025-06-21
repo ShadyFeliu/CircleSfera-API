@@ -34,7 +34,7 @@ export const getAnalyticsDashboard = async (req: Request, res: Response) => {
         summary: {
           totalAlerts: alerts.length,
           trend: timeSeries.trend,
-          hasSeasonality: Object.values(timeSeries.seasonality).some(v => v),
+          hasSeasonality: !!timeSeries.seasonality && Object.values(timeSeries.seasonality).some(v => v),
           strongPatterns: patterns.length
         },
         timeSeries,
@@ -59,7 +59,7 @@ interface ChartData {
   }>;
 }
 
-function generateVisualizations(data: any): Record<string, ChartData> {
+function generateVisualizations(data: any): any {
   return {
     timeSeriesChart: generateTimeSeriesChart(data.timeSeries),
     distributionCharts: {

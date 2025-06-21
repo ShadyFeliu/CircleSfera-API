@@ -1,4 +1,5 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { Options } from 'express-rate-limit';
+import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 
 // Create specific limiters for different alert endpoints
@@ -6,7 +7,7 @@ export const alertHistoryLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute
   message: { error: 'Too many alert history requests, please try again later' },
-  handler: (req, res, next, options) => {
+  handler: (req: Request, res: Response, next: NextFunction, options: Options) => {
     logger.warn('Alert history rate limit exceeded', {
       ip: req.ip,
       path: req.path

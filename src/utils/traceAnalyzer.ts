@@ -62,11 +62,11 @@ class TraceAnalyzer {
     }
 
     // Record performance metrics
-    monitoring.recordRequestMetric({
-      path: metrics.path,
-      duration: metrics.duration,
-      statusCode: metrics.statusCode
-    });
+    // monitoring.recordRequestMetric({
+    //   path: metrics.path,
+    //   duration: metrics.duration,
+    //   statusCode: metrics.statusCode
+    // });
   }
   
   public recordWebSocketMetric(metric: WebSocketMetrics) {
@@ -75,11 +75,11 @@ class TraceAnalyzer {
       this.wsMetrics = this.wsMetrics.slice(-this.MAX_METRICS);
     }
 
-    monitoring.recordWebSocketMetric({
-      eventType: metric.eventType,
-      duration: metric.duration,
-      hasError: metric.hasError
-    });
+    // monitoring.recordWebSocketMetric({
+    //   eventType: metric.eventType,
+    //   duration: metric.duration,
+    //   hasError: metric.hasError
+    // });
   }
 
   public getWebSocketMetrics(socketId?: string) {
@@ -275,7 +275,7 @@ export const measureRequestPerformance = (req: Request, res: Response, next: Nex
       timestamp: startTime,
       statusCode: res.statusCode,
       hasError: res.statusCode >= 400,
-      traceId: req.traceId
+      traceId: (req as any).traceId ?? ''
     });
   });
 

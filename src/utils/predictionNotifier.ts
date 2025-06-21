@@ -53,7 +53,7 @@ class PredictionNotifier {
         if (now >= check.nextCheck && !check.notified) {
           const prediction = predictions.find(p => p.id === id);
           if (prediction) {
-            if (prediction.prediction?.confidence >= this.NOTIFICATION_THRESHOLD) {
+            if (prediction.prediction && typeof prediction.prediction.confidence === 'number' && prediction.prediction.confidence >= this.NOTIFICATION_THRESHOLD) {
               await this.notifyPrediction(prediction);
               check.notified = true;
             }
@@ -85,7 +85,7 @@ class PredictionNotifier {
       value: prediction.pattern.frequency,
       threshold: 0,
       timestamp: Date.now(),
-      severity: 'warning',
+      severity: 'warning' as 'warning' | 'critical',
       message: `Predicted alert pattern: ${prediction.pattern.alertTypes.join(', ')} expected in ${formatDuration(prediction.dueIn)}`
     };
 

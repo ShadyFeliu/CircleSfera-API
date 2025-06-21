@@ -38,9 +38,10 @@ export class TestServer extends EventEmitter {
     });
   }
 
-  public emit(event: string, data?: any): void {
+  public emit(event: string, data?: any): boolean {
     this.server.emit(event, data);
     this.eventLog.push({ event, data });
+    return true; // EventEmitter.emit returns boolean indicating if listeners exist
   }
 
   public getEventLog() {

@@ -60,7 +60,6 @@ describe('AnalyticsClient', () => {
       client.connect();
       testEnv.server.emit('connect');
     });
-    });
 
     it('should handle connection errors', (done) => {
       client.on('error', (error) => {

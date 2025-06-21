@@ -89,11 +89,12 @@ export class AnalyticsClient extends EventEmitter {
     type: 'full' | 'summary' | 'timeSeries' | 'patterns';
     timeframe: string;
   }): Promise<any> {
-    if (!this.socket?.connected) {
-      throw new Error('Client not connected');
-    }
-
     return new Promise((resolve, reject) => {
+      if (!this.socket) {
+        reject(new Error('Client not connected'));
+        return;
+      }
+
       const timeout = setTimeout(() => {
         cleanup();
         reject(new Error('Export timeout'));
