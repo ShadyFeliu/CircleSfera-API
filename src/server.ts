@@ -123,7 +123,12 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
-  log(`🚀 Servidor de señalización iniciado en puerto ${PORT}`);
-  log(`🌍 CORS configurado para: ${process.env.ALLOWED_ORIGINS || 'dominios por defecto'}`);
-});
+
+if (require.main === module) {
+  httpServer.listen(PORT, () => {
+    log(`🚀 Servidor de señalización iniciado en puerto ${PORT}`);
+    log(`🌍 CORS configurado para: ${process.env.ALLOWED_ORIGINS || 'dominios por defecto'}`);
+  });
+}
+
+export { httpServer, io };
