@@ -281,6 +281,7 @@ httpServer.on('request', (req, res) => {
   // Default response for other routes
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
+  return;
 });
 
 httpServer.listen(PORT, () => {
