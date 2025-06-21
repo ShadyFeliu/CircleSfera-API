@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { io } from 'socket.io-client';
+import { io as socketIOClient } from 'socket.io-client';
 import { AddressInfo } from 'net';
 
 describe('Matchmaking Integration Tests', () => {
@@ -26,7 +26,7 @@ describe('Matchmaking Integration Tests', () => {
 
   beforeEach((done) => {
     const port = (httpServer.address() as AddressInfo).port;
-    const client = io(`http://localhost:${port}`);
+    const client = socketIOClient(`http://localhost:${port}`);
     clientSockets.push(client);
     client.on('connect', done);
   });

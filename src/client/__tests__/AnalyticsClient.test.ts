@@ -468,14 +468,14 @@ describe('AnalyticsClient', () => {
 
   describe('Connection State Management', () => {
     it('should maintain correct connection state', () => {
-      expect(client.isConnected()).toBe(false);
+      expect(client.isConnected).toBe(false);
       
       client.connect();
       testEnv.server.emit('connect');
-      expect(client.isConnected()).toBe(true);
+      expect(client.isConnected).toBe(true);
       
       testEnv.server.emit('disconnect');
-      expect(client.isConnected()).toBe(false);
+      expect(client.isConnected).toBe(false);
     });
 
     it('should handle multiple disconnect calls gracefully', () => {
@@ -485,7 +485,7 @@ describe('AnalyticsClient', () => {
       client.disconnect();
       client.disconnect(); // Should not throw
       
-      expect(client.isConnected()).toBe(false);
+      expect(client.isConnected).toBe(false);
     });
   });
 
