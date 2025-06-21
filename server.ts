@@ -6,6 +6,24 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const httpServer = createServer();
+
+// Add HTTP endpoints for health checks BEFORE Socket.IO initialization
+httpServer.on('request', (req, res) => {
+  if (req.url === '/health' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      connections: 0 // Will be updated after Socket.IO initialization
+    }));
+    return;
+  }
+  
+  // Let Socket.IO handle other requests
+  return;
+});
+
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || [
@@ -264,25 +282,6 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-
-// Add HTTP endpoints for health checks
-httpServer.on('request', (req, res) => {
-  if (req.url === '/health' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      connections: getOnlineUsersCount()
-    }));
-    return;
-  }
-  
-  // Default response for other routes
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'Not found' }));
-  return;
-});
 
 httpServer.listen(PORT, () => {
   console.log(`🚀 Servidor de señalización escuchando en el puerto ${PORT}`);
