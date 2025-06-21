@@ -1,0 +1,15 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# @ShadyFeliu will be requested for review when someone 
+# opens a pull request.
+*       @ShadyFeliu
+
+# Testing files
+/__tests__/ @ShadyFeliu
+
+# CI/CD files
+/.github/workflows/ @ShadyFeliu
+
+# Documentation
+/docs/ @ShadyFeliu
+*.md @ShadyFeliu
