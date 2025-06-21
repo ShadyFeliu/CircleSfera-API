@@ -27,6 +27,7 @@ module.exports = {
     origin: process.env.ALLOWED_ORIGINS?.split(',') || [
       'https://circlesfera.com',
       'https://www.circlesfera.com',
+      'https://circlesfera.vercel.app',
       'http://localhost:3000'
     ],
     methods: ['GET', 'POST'],
