@@ -64,6 +64,28 @@ const findPartnerFor = (socketId: string) => {
   const interests = userInterests.get(socketId) || [];
   let partnerId: string | undefined;
 
+  // Verificar si hay exactamente 2 personas conectadas para emparejamiento automático
+  const totalUsers = io.engine.clientsCount;
+  if (totalUsers === 2) {
+    // Buscar la otra persona que no esté emparejada
+    const allSockets = Array.from(io.sockets.sockets.keys());
+    partnerId = allSockets.find(id => id !== socketId && !userPairs.has(id));
+    
+    if (partnerId) {
+      log(`Emparejamiento automático: ${socketId} y ${partnerId} (2 usuarios totales)`);
+      userPairs.set(socketId, partnerId);
+      userPairs.set(partnerId, socketId);
+      
+      cleanUpUserFromQueues(partnerId);
+      cleanUpUserFromQueues(socketId);
+
+      io.to(socketId).emit("partner", { id: partnerId, initiator: true });
+      io.to(partnerId).emit("partner", { id: socketId, initiator: false });
+      return;
+    }
+  }
+
+  // Lógica original de emparejamiento por intereses
   if (interests.length > 0) {
     for (const interest of interests) {
       const queue = interestQueues.get(interest);
@@ -141,6 +163,30 @@ const endChat = (socketId: string) => {
   userPairs.delete(socketId);
 };
 
+// Función para verificar emparejamiento automático de usuarios sin emparejar
+const checkAutoPairing = () => {
+  const totalUsers = io.engine.clientsCount;
+  
+  if (totalUsers === 2) {
+    const allSockets = Array.from(io.sockets.sockets.keys());
+    const unpairedUsers = allSockets.filter(id => !userPairs.has(id));
+    
+    if (unpairedUsers.length === 2) {
+      const [user1, user2] = unpairedUsers;
+      log(`Emparejamiento automático detectado: ${user1} y ${user2}`);
+      
+      userPairs.set(user1, user2);
+      userPairs.set(user2, user1);
+      
+      cleanUpUserFromQueues(user1);
+      cleanUpUserFromQueues(user2);
+
+      io.to(user1).emit("partner", { id: user2, initiator: true });
+      io.to(user2).emit("partner", { id: user1, initiator: false });
+    }
+  }
+};
+
 io.on("connection", (socket) => {
   log(`Usuario conectado: ${socket.id}`);
   
@@ -148,6 +194,9 @@ io.on("connection", (socket) => {
     log('Usuario buscando pareja', { socketId: socket.id, interests });
     userInterests.set(socket.id, interests || []);
     findPartnerFor(socket.id);
+    
+    // Verificar emparejamiento automático después de buscar pareja
+    setTimeout(checkAutoPairing, 1000);
   });
   
   socket.on("signal", (data) => {
@@ -161,6 +210,8 @@ io.on("connection", (socket) => {
 
   socket.on("end_chat", () => {
     endChat(socket.id);
+    // Verificar emparejamiento automático después de terminar chat
+    setTimeout(checkAutoPairing, 1000);
   });
 
   socket.on("disconnect", () => {
@@ -168,6 +219,9 @@ io.on("connection", (socket) => {
     endChat(socket.id);
     cleanUpUserFromQueues(socket.id);
     userInterests.delete(socket.id);
+    
+    // Verificar emparejamiento automático después de desconexión
+    setTimeout(checkAutoPairing, 1000);
   });
 });
 
