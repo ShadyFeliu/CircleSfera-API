@@ -10,6 +10,42 @@ interface AnalyticsSubscription {
   interval: number;
 }
 
+interface AnalyticsData {
+  summary: {
+    totalAlerts: number;
+    trend: string;
+    hasSeasonality: boolean;
+    strongPatterns: number;
+  };
+  timeSeries: {
+    trend: string;
+    seasonality?: Record<string, boolean>;
+    forecasts: Array<{
+      timestamp: number;
+      value: number;
+    }>;
+  };
+  distribution: {
+    byHour: Record<number, number>;
+    byDay: Record<number, number>;
+    byType: Record<string, number>;
+    bySeverity: Record<string, number>;
+  };
+  patterns: Array<{
+    pattern: string;
+    confidence: number;
+    support: number;
+    lastSeen?: number;
+  }>;
+}
+
+interface ExportData {
+  summary?: AnalyticsData['summary'];
+  timeSeries?: AnalyticsData['timeSeries'];
+  patterns?: AnalyticsData['patterns'];
+  timestamp: number;
+}
+
 export class AnalyticsWebSocketHandler {
   private subscriptions: Map<string, AnalyticsSubscription> = new Map();
   private updateIntervals: Map<string, NodeJS.Timeout> = new Map();
@@ -208,7 +244,7 @@ export class AnalyticsWebSocketHandler {
     }
   }
 
-  private filterDataForExport(data: any, type: string): any {
+  private filterDataForExport(data: AnalyticsData, type: string): ExportData {
     switch (type) {
       case 'summary':
         return {
@@ -226,24 +262,27 @@ export class AnalyticsWebSocketHandler {
           timestamp: Date.now()
         };
       default:
-        return data;
+        return {
+          ...data,
+          timestamp: Date.now()
+        };
     }
   }
 
-  private convertToCSV(data: any, type: string): string {
+  private convertToCSV(data: ExportData, type: string): string {
     switch (type) {
       case 'summary':
-        return this.convertSummaryToCSV(data.summary);
+        return this.convertSummaryToCSV(data.summary!);
       case 'timeSeries':
-        return this.convertTimeSeriesToCSV(data.timeSeries);
+        return this.convertTimeSeriesToCSV(data.timeSeries!);
       case 'patterns':
-        return this.convertPatternsToCSV(data.patterns);
+        return this.convertPatternsToCSV(data.patterns!);
       default:
-        return this.convertFullDataToCSV(data);
+        return this.convertFullDataToCSV(data as AnalyticsData & { timestamp: number });
     }
   }
 
-  private convertSummaryToCSV(summary: any): string {
+  private convertSummaryToCSV(summary: AnalyticsData['summary']): string {
     const rows = [
       ['Metric', 'Value'],
       ...Object.entries(summary).map(([metric, value]) => [metric, String(value)])
@@ -251,15 +290,15 @@ export class AnalyticsWebSocketHandler {
     return this.formatCSV(rows);
   }
 
-  private convertTimeSeriesToCSV(timeSeries: any): string {
+  private convertTimeSeriesToCSV(timeSeries: AnalyticsData['timeSeries']): string {
     const rows = [
       ['Timestamp', 'Value', 'Trend', 'Seasonality'],
-      ...timeSeries.forecasts.map((point: any) => [
+      ...timeSeries.forecasts.map((point) => [
         new Date(point.timestamp).toISOString(),
         String(point.value),
         timeSeries.trend,
-        Object.entries(timeSeries.seasonality)
-          .filter(([_, value]) => value)
+        Object.entries(timeSeries.seasonality || {})
+          .filter(([, value]) => value)
           .map(([key]) => key)
           .join(';')
       ])
@@ -267,7 +306,7 @@ export class AnalyticsWebSocketHandler {
     return this.formatCSV(rows);
   }
 
-  private convertPatternsToCSV(patterns: any[]): string {
+  private convertPatternsToCSV(patterns: AnalyticsData['patterns']): string {
     const rows = [
       ['Pattern', 'Confidence', 'Support', 'Last Occurrence'],
       ...patterns.map(pattern => [
@@ -280,7 +319,7 @@ export class AnalyticsWebSocketHandler {
     return this.formatCSV(rows);
   }
 
-  private convertFullDataToCSV(data: any): string {
+  private convertFullDataToCSV(data: AnalyticsData): string {
     const rows = [
       ['Category', 'Metric', 'Value', 'Timestamp'],
       // Summary data
@@ -288,11 +327,11 @@ export class AnalyticsWebSocketHandler {
         ['Summary', metric, String(value), new Date().toISOString()]
       ),
       // Time series data
-      ...data.timeSeries.forecasts.map((point: any) => 
+      ...data.timeSeries.forecasts.map((point) => 
         ['TimeSeries', 'forecast', String(point.value), new Date(point.timestamp).toISOString()]
       ),
       // Pattern data
-      ...data.patterns.map((pattern: any) => 
+      ...data.patterns.map((pattern) => 
         ['Pattern', pattern.pattern, String(pattern.confidence), pattern.lastSeen ? new Date(pattern.lastSeen).toISOString() : '']
       )
     ];

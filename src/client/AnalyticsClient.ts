@@ -20,6 +20,12 @@ interface SubscriptionOptions {
   interval: number;
 }
 
+// Define tipos para los datos de eventos
+interface AnalyticsUpdate {
+  // Define aquí la estructura esperada si se conoce
+  [key: string]: unknown;
+}
+
 export class AnalyticsClient extends EventEmitter {
   private socket: Socket | null = null;
   private retryCount = 0;
@@ -88,7 +94,7 @@ export class AnalyticsClient extends EventEmitter {
     format: 'json' | 'csv';
     type: 'full' | 'summary' | 'timeSeries' | 'patterns';
     timeframe: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         reject(new Error('Client not connected'));
@@ -106,12 +112,12 @@ export class AnalyticsClient extends EventEmitter {
         clearTimeout(timeout);
       };
 
-      const handleSuccess = (data: any) => {
+      const handleSuccess = (data: unknown) => {
         cleanup();
         resolve(data);
       };
 
-      const handleError = (error: any) => {
+      const handleError = (error: unknown) => {
         cleanup();
         reject(error);
       };
@@ -142,14 +148,14 @@ export class AnalyticsClient extends EventEmitter {
       }
     });
 
-    this.socket.on('error', (error: any) => {
+    this.socket.on('error', (error: unknown) => {
       this.emit('error', error);
-      if (error.message?.includes('Rate limit exceeded')) {
+      if (typeof error === 'object' && error && 'message' in error && (error as { message?: string }).message?.includes('Rate limit exceeded')) {
         this.handleRateLimit();
       }
     });
 
-    this.socket.on('analytics_update', (data: any) => {
+    this.socket.on('analytics_update', (data: AnalyticsUpdate) => {
       this.emit('update', data);
     });
 

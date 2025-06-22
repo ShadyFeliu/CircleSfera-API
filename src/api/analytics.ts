@@ -59,7 +59,41 @@ interface ChartData {
   }>;
 }
 
-function generateVisualizations(data: any): any {
+interface TimeSeriesPoint {
+  timestamp: number;
+  value: number;
+}
+
+interface TimeSeries {
+  forecasts: TimeSeriesPoint[];
+  trend: string;
+  seasonality?: Record<string, boolean>;
+}
+
+interface Distribution {
+  byHour: Record<number, number>;
+  byDay: Record<number, number>;
+  byType: Record<string, number>;
+  bySeverity: Record<string, number>;
+}
+
+interface Pattern {
+  pattern: string;
+  confidence: number;
+}
+
+interface Visualizations {
+  timeSeriesChart: ChartData;
+  distributionCharts: {
+    hourly: ChartData;
+    daily: ChartData;
+    type: ChartData;
+    severity: ChartData;
+  };
+  patternConfidenceChart: ChartData;
+}
+
+function generateVisualizations(data: { timeSeries: TimeSeries; distribution: Distribution; patterns: Pattern[] }): Visualizations {
   return {
     timeSeriesChart: generateTimeSeriesChart(data.timeSeries),
     distributionCharts: {
@@ -72,9 +106,8 @@ function generateVisualizations(data: any): any {
   };
 }
 
-function generateTimeSeriesChart(timeSeries: any): ChartData {
+function generateTimeSeriesChart(timeSeries: TimeSeries): ChartData {
   const allPoints = [...timeSeries.forecasts];
-  
   return {
     type: 'line',
     labels: allPoints.map(p => new Date(p.timestamp).toISOString()),
@@ -101,7 +134,7 @@ function generateDistributionChart(
     datasets: [
       {
         label,
-        data: sortedEntries.map(([_, value]) => value),
+        data: sortedEntries.map(([, value]) => value),
         backgroundColor: ['rgba(54, 162, 235, 0.2)']
       }
     ]
@@ -121,14 +154,14 @@ function generatePieChart(
     datasets: [
       {
         label,
-        data: entries.map(([_, value]) => value),
+        data: entries.map(([, value]) => value),
         backgroundColor: colors
       }
     ]
   };
 }
 
-function generatePatternConfidenceChart(patterns: any[]): ChartData {
+function generatePatternConfidenceChart(patterns: Pattern[]): ChartData {
   return {
     type: 'bar',
     labels: patterns.map(p => p.pattern),

@@ -1,8 +1,35 @@
 import { Alert } from './alertNotifier';
-import { alertPatternAnalyzer } from './alertPatternAnalyzer';
+import { alertPatternAnalyzer, AlertPattern, PatternMatch } from './alertPatternAnalyzer';
 import { predictionAccuracyTracker } from './predictionAccuracy';
 import fs from 'fs/promises';
 import path from 'path';
+
+interface AccuracyMetrics {
+  totalPredictions: number;
+  verifiedPredictions: number;
+  averageAccuracy: number;
+  highConfidenceAccuracy: number;
+  byPattern?: Array<{
+    patternId: string;
+    accuracy: number;
+    predictions: number;
+    trend: string;
+  }>;
+  recentTrend?: {
+    trend: string;
+    confidence?: number;
+  };
+}
+
+interface SimulationResult {
+  patterns: Array<{
+    timestamp: number;
+    alert: string;
+    matches: PatternMatch[];
+  }>;
+  predictions: Array<AlertPattern & { dueIn: number }>;
+  accuracy: AccuracyMetrics | null;
+}
 
 /**
  * Development tools for testing and debugging the prediction system
@@ -69,11 +96,11 @@ class PredictionDevTools {
   /**
    * Simulate prediction system with test data
    */
-  public async simulatePredictions(alerts: Alert[]) {
-    const results = {
-      patterns: [] as any[],
-      predictions: [] as any[],
-      accuracy: null as any
+  public async simulatePredictions(alerts: Alert[]): Promise<SimulationResult> {
+    const results: SimulationResult = {
+      patterns: [],
+      predictions: [],
+      accuracy: null
     };
 
     // Process alerts in chronological order
@@ -122,7 +149,7 @@ class PredictionDevTools {
     return analysis;
   }
 
-  private calculateConfidenceDistribution(predictions: any[]) {
+  private calculateConfidenceDistribution(predictions: Array<AlertPattern & { dueIn: number }>) {
     const ranges = {
       low: 0, // < 0.4
       medium: 0, // 0.4 - 0.7
@@ -139,7 +166,7 @@ class PredictionDevTools {
     return ranges;
   }
 
-  private analyzePatternEffectiveness(patternMetrics: any[]) {
+  private analyzePatternEffectiveness(patternMetrics: AccuracyMetrics['byPattern']) {
     if (!patternMetrics) return [];
     
     return patternMetrics.map(pattern => ({
@@ -153,7 +180,7 @@ class PredictionDevTools {
     }));
   }
 
-  private getPatternRecommendation(pattern: any) {
+  private getPatternRecommendation(pattern: { accuracy: number; trend: string; predictions: number }) {
     if (pattern.accuracy < 0.5) {
       return 'Consider removing or refining this pattern';
     }
@@ -166,7 +193,7 @@ class PredictionDevTools {
     return 'Pattern is performing well';
   }
 
-  private generateRecommendations(metrics: any, patterns: any[]) {
+  private generateRecommendations(metrics: AccuracyMetrics, patterns: Array<AlertPattern & { dueIn: number }>) {
     const recommendations = [];
 
     if (metrics.averageAccuracy < 0.6) {
@@ -177,7 +204,7 @@ class PredictionDevTools {
       recommendations.push('No active patterns detected, may need to adjust pattern detection sensitivity');
     }
 
-    if (metrics.recentTrend.trend === 'degrading') {
+    if (metrics.recentTrend?.trend === 'degrading') {
       recommendations.push('Prediction accuracy is trending downward, review recent system changes');
     }
 
@@ -189,12 +216,12 @@ class PredictionDevTools {
     await fs.writeFile(filepath, JSON.stringify(alerts, null, 2));
   }
 
-  private async saveSimulationResults(results: any) {
+  private async saveSimulationResults(results: SimulationResult) {
     const filepath = path.join(__dirname, '../../data/simulation-results.json');
     await fs.writeFile(filepath, JSON.stringify(results, null, 2));
   }
 
-  private async saveAnalysis(analysis: any) {
+  private async saveAnalysis(analysis: unknown) {
     const filepath = path.join(__dirname, '../../data/prediction-analysis.json');
     await fs.writeFile(filepath, JSON.stringify(analysis, null, 2));
   }

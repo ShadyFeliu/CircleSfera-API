@@ -120,7 +120,7 @@ const stream = {
 };
 
 // Helper functions for structured logging
-export const logWebSocketEvent = (event: string, socketId: string, data?: any) => {
+export const logWebSocketEvent = (event: string, socketId: string, data?: unknown) => {
   logger.info('WebSocket Event', {
     event,
     socketId,
@@ -129,7 +129,7 @@ export const logWebSocketEvent = (event: string, socketId: string, data?: any) =
   });
 };
 
-export const logUserAction = (action: string, userId: string, details?: any) => {
+export const logUserAction = (action: string, userId: string, details?: unknown) => {
   logger.info('User Action', {
     action,
     userId,
@@ -138,7 +138,7 @@ export const logUserAction = (action: string, userId: string, details?: any) => 
   });
 };
 
-export const logError = (error: Error, context?: any) => {
+export const logError = (error: Error, context?: unknown) => {
   logger.error('Error Occurred', {
     error: {
       message: error.message,

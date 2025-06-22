@@ -24,7 +24,7 @@ interface ValidationResult {
 }
 
 export const validateAlertHistoryRequest = (req: Request, res: Response, next: NextFunction) => {
-  const { type, severity, from, to, page, limit } = req.query;
+  const { severity, from, to, page, limit } = req.query;
 
   // Validate severity if provided
   if (severity && !['warning', 'critical'].includes(severity as string)) {
@@ -211,10 +211,8 @@ export const AlertTypes = {
 export type AlertType = typeof AlertTypes[keyof typeof AlertTypes];
 
 // Add type declaration
-declare global {
-  namespace Express {
+declare module 'express-serve-static-core' {
     interface Request {
       pagination?: PaginationParams;
-    }
   }
 }

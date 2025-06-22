@@ -189,7 +189,7 @@ class AlertProcessor {
   private async cleanupOldBatches() {
     const now = Date.now();
     const oldBatches = Array.from(this.batches.entries())
-      .filter(([_, batch]) => now - batch.timestamp > this.CLEANUP_INTERVAL);
+      .filter(([, batch]) => now - batch.timestamp > this.CLEANUP_INTERVAL);
 
     for (const [id, batch] of oldBatches) {
       try {

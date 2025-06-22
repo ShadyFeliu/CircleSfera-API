@@ -1,5 +1,4 @@
 import { logger } from './logger';
-import { alertProcessor } from './alertProcessor';
 
 export interface Alert {
   type: string;
@@ -105,7 +104,7 @@ class AlertNotifier {
     if (alert.type !== 'predicted_alert_pattern') {
       try {
         // Import here to avoid circular dependency
-        const { predictionAccuracyTracker } = require('./predictionAccuracy');
+        const { predictionAccuracyTracker } = await import('./predictionAccuracy');
         if (predictionAccuracyTracker) {
           // Use the alert pattern to verify predictions
           if (alert.type) {

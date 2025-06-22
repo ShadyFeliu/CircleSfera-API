@@ -3,20 +3,21 @@ import { alertPatternAnalyzer } from '../utils/alertPatternAnalyzer';
 import { predictionAccuracyTracker } from '../utils/predictionAccuracy';
 import { logger } from '../utils/logger';
 import { predictionDevTools } from '../utils/devTools';
+import { AlertPattern } from '../utils/alertPatternAnalyzer';
 
 export const getPredictions = async (req: Request, res: Response) => {
   try {
     const timeframe = req.query.timeframe || '24h';
-    const predictions = alertPatternAnalyzer.getPatternPredictions();
+    const predictions: Array<AlertPattern & { dueIn: number }> = alertPatternAnalyzer.getPatternPredictions();
     
     // Filter predictions based on timeframe
     const timeframeMs = parseTimeframe(timeframe as string);
-    const filteredPredictions = predictions.filter((p: any) => p.dueIn <= timeframeMs);
+    const filteredPredictions = predictions.filter((p) => p.dueIn <= timeframeMs);
 
     res.json({
       timestamp: Date.now(),
       timeframe,
-      predictions: filteredPredictions.map((p: any) => ({
+      predictions: filteredPredictions.map((p) => ({
         id: p.id,
         pattern: {
           types: p.pattern.alertTypes,
@@ -58,13 +59,13 @@ export const getPredictionAccuracy = async (req: Request, res: Response) => {
 // Development-only endpoint for generating test data
 export const generateTestData = async (req: Request, res: Response) => {
   try {
-    const options = req.body;
+    const options: { days: number; patterns: { type: string; frequency: number; severity: 'warning' | 'critical'; jitter: number }[] } = req.body;
     
     const alerts = await predictionDevTools.generateTestData(options);
     res.json({
       generated: alerts.length,
       timespan: `${options.days} days`,
-      patterns: options.patterns.map((p: any) => p.type)
+      patterns: options.patterns.map((p) => p.type)
     });
   } catch (error) {
     logger.error('Error generating test data', { error });

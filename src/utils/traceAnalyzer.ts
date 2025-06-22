@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from './logger';
-import { monitoring } from './monitoring';
 
 interface TraceMetrics {
   path: string;
@@ -27,6 +26,33 @@ interface AlertThresholds {
   p95ResponseTime: number;
   wsConnectionErrors: number;
   wsLatency: number;
+}
+
+interface SystemAnalysis {
+  http: {
+    totalRequests: number;
+    averageResponseTime: number;
+    errorRate: number;
+    pathAnalysis: Map<string, {
+      count: number;
+      averageDuration: number;
+      errorCount: number;
+    }>;
+  };
+  websocket: {
+    totalEvents: number;
+    averageLatency: number;
+    errorRate: number;
+    eventTypeAnalysis: Map<string, {
+      count: number;
+      averageLatency: number;
+      errorCount: number;
+    }>;
+  };
+}
+
+interface RequestWithTraceId extends Request {
+  traceId?: string;
 }
 
 class TraceAnalyzer {
@@ -215,7 +241,7 @@ class TraceAnalyzer {
     this.checkThresholds(analysis);
   }
   
-  private checkThresholds(analysis: any) {
+  private checkThresholds(analysis: SystemAnalysis) {
     const alerts = [];
 
     // HTTP alerts
@@ -275,7 +301,7 @@ export const measureRequestPerformance = (req: Request, res: Response, next: Nex
       timestamp: startTime,
       statusCode: res.statusCode,
       hasError: res.statusCode >= 400,
-      traceId: (req as any).traceId ?? ''
+      traceId: (req as RequestWithTraceId).traceId ?? ''
     });
   });
 

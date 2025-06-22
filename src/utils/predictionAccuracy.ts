@@ -1,6 +1,7 @@
 import { Alert } from './alertNotifier';
 import { logger } from './logger';
 import * as fs from 'fs';
+import { AlertPattern } from './alertPatternAnalyzer';
 
 interface PredictionAccuracyMetric {
   patternId: string;
@@ -66,12 +67,12 @@ class PredictionAccuracyTracker {
     }
   }
 
-  public recordPrediction(prediction: any) {
+  public recordPrediction(prediction: AlertPattern) {
     this.metrics.push({
       patternId: prediction.id,
-      predictedTime: prediction.prediction.nextExpected,
+      predictedTime: prediction.prediction!.nextExpected,
       actualTime: null,
-      confidence: prediction.prediction.confidence,
+      confidence: prediction.prediction!.confidence,
       accuracy: null,
       verified: false
     });

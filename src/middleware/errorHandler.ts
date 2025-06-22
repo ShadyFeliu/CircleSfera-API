@@ -9,10 +9,10 @@ export interface AppError extends Error {
 export const errorHandler = (err: Error, req: Request, res: Response) => {
   logger.error('Unhandled error', {
     error: err.message,
-    stack: err.stack,
+      stack: err.stack,
     url: req.url,
-    method: req.method,
-    ip: req.ip
+      method: req.method,
+      ip: req.ip
   });
 
   res.status(500).json({

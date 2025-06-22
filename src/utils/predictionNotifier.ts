@@ -2,6 +2,7 @@ import { alertPatternAnalyzer } from './alertPatternAnalyzer';
 import { alertNotifier } from './alertNotifier';
 import { predictionAccuracyTracker } from './predictionAccuracy';
 import { logger } from './logger';
+import { AlertPattern } from './alertPatternAnalyzer';
 
 interface PredictionCheck {
   patternId: string;
@@ -79,7 +80,7 @@ class PredictionNotifier {
     return Date.now() + 21600000; // 6 hours
   }
 
-  private async notifyPrediction(prediction: any) {
+  private async notifyPrediction(prediction: AlertPattern & { dueIn: number }) {
     const alert = {
       type: 'predicted_alert_pattern',
       value: prediction.pattern.frequency,
@@ -96,7 +97,7 @@ class PredictionNotifier {
     logger.info('Prediction notification sent', { prediction });
   }
 
-  private cleanupChecks(currentPredictions: any[]) {
+  private cleanupChecks(currentPredictions: Array<AlertPattern & { dueIn: number }>) {
     const predictionsSet = new Set(currentPredictions.map(p => p.id));
     for (const [id] of this.checks.entries()) {
       if (!predictionsSet.has(id)) {

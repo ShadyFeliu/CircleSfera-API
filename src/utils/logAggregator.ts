@@ -8,7 +8,7 @@ interface LogEntry {
   timestamp: string;
   level: string;
   message: string;
-  metadata?: any;
+  metadata?: unknown;
 }
 
 interface LogAggregation {
@@ -125,7 +125,7 @@ export class LogAggregator {
           aggregation.timeDistribution[hour] = (aggregation.timeDistribution[hour] || 0) + 1;
 
           // User activity
-          if (entry.metadata?.userId) {
+          if (entry.metadata && typeof entry.metadata === 'object' && 'userId' in entry.metadata && typeof entry.metadata.userId === 'string') {
             userActivityMap.set(
               entry.metadata.userId,
               (userActivityMap.get(entry.metadata.userId) || 0) + 1

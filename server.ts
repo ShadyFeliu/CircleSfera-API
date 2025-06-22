@@ -51,7 +51,7 @@ const io = new Server(httpServer, {
   }
 });
 
-const log = (message: string, data?: any) => {
+const log = (message: string, data?: unknown) => {
   console.log(`[${new Date().toISOString()}] ${message}`, data || '');
 };
 
@@ -87,9 +87,9 @@ const findPartnerFor = (socketId: string) => {
 
   // Lógica original de emparejamiento por intereses
   if (interests.length > 0) {
-    for (const interest of interests) {
-      const queue = interestQueues.get(interest);
-      if (queue && queue.length > 0) {
+  for (const interest of interests) {
+    const queue = interestQueues.get(interest);
+    if (queue && queue.length > 0) {
         partnerId = queue.find(id => id !== socketId);
         if (partnerId) {
           const index = queue.indexOf(partnerId);
@@ -131,36 +131,36 @@ const findPartnerFor = (socketId: string) => {
       });
     } else {
       if (!genericQueue.includes(socketId)) {
-        genericQueue.push(socketId);
+      genericQueue.push(socketId);
       }
     }
   }
 };
 
 const cleanUpUserFromQueues = (socketId: string) => {
-  const genericIndex = genericQueue.indexOf(socketId);
+    const genericIndex = genericQueue.indexOf(socketId);
   if (genericIndex > -1) {
     genericQueue.splice(genericIndex, 1);
     log(`Limpiado ${socketId} de la cola genérica.`);
   }
 
   interestQueues.forEach((queue, interest) => {
-    const index = queue.indexOf(socketId);
+        const index = queue.indexOf(socketId);
     if (index > -1) {
       queue.splice(index, 1);
       log(`Limpiado ${socketId} de la cola de interés: ${interest}.`);
-    }
+}
   });
 };
 
 const endChat = (socketId: string) => {
-  const partnerId = userPairs.get(socketId);
-  if (partnerId) {
+    const partnerId = userPairs.get(socketId);
+    if (partnerId) {
     log(`Finalizando chat entre ${socketId} y ${partnerId}`);
-    io.to(partnerId).emit("partner_disconnected");
-    userPairs.delete(partnerId);
-  }
-  userPairs.delete(socketId);
+      io.to(partnerId).emit("partner_disconnected");
+      userPairs.delete(partnerId);
+    }
+    userPairs.delete(socketId);
 };
 
 // Función para verificar emparejamiento automático de usuarios sin emparejar
@@ -189,7 +189,7 @@ const checkAutoPairing = () => {
 
 io.on("connection", (socket) => {
   log(`Usuario conectado: ${socket.id}`);
-  
+
   socket.on("find_partner", ({ interests }: { interests: string[] }) => {
     log('Usuario buscando pareja', { socketId: socket.id, interests });
     userInterests.set(socket.id, interests || []);
@@ -228,10 +228,10 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3001;
 
 if (require.main === module) {
-  httpServer.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     log(`🚀 Servidor de señalización iniciado en puerto ${PORT}`);
     log(`🌍 CORS configurado para: ${process.env.ALLOWED_ORIGINS || 'dominios por defecto'}`);
-  });
+});
 }
 
 export { httpServer, io };

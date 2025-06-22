@@ -3,7 +3,7 @@ import { logger } from './logger';
 import * as fs from 'fs';
 import path from 'path';
 
-interface AlertPattern {
+export interface AlertPattern {
   id: string;
   pattern: {
     alertTypes: string[];
@@ -19,7 +19,7 @@ interface AlertPattern {
   };
 }
 
-interface PatternMatch {
+export interface PatternMatch {
   patternId: string;
   confidence: number;
   matchedAlerts: Alert[];
@@ -104,7 +104,7 @@ class AlertPatternAnalyzer {
     }
   }
 
-  private detectPatterns(batches: any[]) {
+  private detectPatterns(batches: Array<{ alerts: Alert[] }>) {
     batches.forEach(batch => {
       const alertGroups = this.groupAlertsByTimeWindow(batch.alerts);
       alertGroups.forEach(group => {
