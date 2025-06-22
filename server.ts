@@ -1,40 +1,35 @@
 import { createServer } from "http";
 import { Server } from "socket.io";
+import express from 'express';
 import * as dotenv from 'dotenv';
+import { getMetrics } from './src/api/metrics';
 
 // Load environment variables
 dotenv.config();
 
-const httpServer = createServer((req, res) => {
-  // Responder a GET y HEAD en la raíz
-  if ((req.url === '/' && (req.method === 'GET' || req.method === 'HEAD'))) {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    // Para HEAD no se envía body, solo headers
-    if (req.method === 'GET') {
-      res.end(JSON.stringify({
-        message: 'CircleSfera API Server',
-        status: 'running',
-        timestamp: new Date().toISOString()
-      }));
-    } else {
-      res.end();
-    }
-    return;
-  }
-  // Responder a GET y HEAD en /health
-  if ((req.url === '/health' && (req.method === 'GET' || req.method === 'HEAD'))) {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    if (req.method === 'GET') {
-      res.end(JSON.stringify({
-        status: 'ok',
-        timestamp: new Date().toISOString()
-      }));
-    } else {
-      res.end();
-    }
-    return;
-  }
+const app = express();
+app.use(express.json());
+
+// API Routes
+app.get('/api/metrics', getMetrics);
+
+// Basic routes
+app.get('/', (req, res) => {
+  res.json({
+    message: 'CircleSfera API Server',
+    status: 'running',
+    timestamp: new Date().toISOString()
+  });
 });
+
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
+const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
