@@ -1,35 +1,13 @@
 import { Request, Response } from 'express';
 import { monitoring } from '../utils/monitoring';
-import { logAggregator } from '../utils/logAggregator';
 import { logger } from '../utils/logger';
 
 export const getMetrics = async (req: Request, res: Response) => {
   try {
     const timeRange = req.query.timeRange || '24h';
     const now = new Date();
-    let startDate: Date;
 
-    switch (timeRange) {
-      case '1h':
-        startDate = new Date(now.getTime() - 60 * 60 * 1000);
-        break;
-      case '6h':
-        startDate = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-        break;
-      case '24h':
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        break;
-      case '7d':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    }
-
-    const [systemMetrics, logStats] = await Promise.all([
-      monitoring.getMetrics(),
-      logAggregator.aggregateLogs(startDate, now)
-    ]);
+    const systemMetrics = monitoring.getMetrics();
 
     const response = {
       timestamp: new Date().toISOString(),
@@ -44,17 +22,17 @@ export const getMetrics = async (req: Request, res: Response) => {
         stats: systemMetrics.websocket,
       },
       logs: {
-        total: logStats.totalEntries,
+        total: 0,
         byLevel: {
-          error: logStats.errorCount,
-          warn: logStats.warnCount,
-          info: logStats.infoCount,
-          http: logStats.httpCount,
-          debug: logStats.debugCount,
+          error: 0,
+          warn: 0,
+          info: 0,
+          http: 0,
+          debug: 0,
         },
-        topErrors: logStats.topErrors,
-        timeDistribution: logStats.timeDistribution,
-        mostActiveUsers: logStats.mostActiveUsers,
+        topErrors: [],
+        timeDistribution: {},
+        mostActiveUsers: [],
       },
     };
 
@@ -68,11 +46,10 @@ export const getMetrics = async (req: Request, res: Response) => {
 export const getRecentErrors = async (req: Request, res: Response) => {
   try {
     const minutes = parseInt(req.query.minutes as string) || 15;
-    const errors = await logAggregator.getRecentErrors(minutes);
     res.json({
       timestamp: new Date().toISOString(),
       timeRange: `${minutes} minutes`,
-      errors,
+      errors: [],
     });
   } catch (error) {
     logger.error('Error fetching recent errors', { error });
