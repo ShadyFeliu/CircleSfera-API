@@ -14,7 +14,7 @@ Actualmente estamos dando soporte de seguridad a las siguientes versiones:
 Agradecemos los reportes de vulnerabilidades de seguridad. Por favor:
 
 1. **NO** abras un issue público para reportar vulnerabilidades de seguridad.
-2. Envía un reporte detallado a [security@circlesfera.com](mailto:security@circlesfera.com).
+2. Envía un reporte detallado a [circlesfera@codeqlick.com](mailto:circlesfera@codeqlick.com).
 
 En tu reporte, incluye:
 - Descripción detallada de la vulnerabilidad
