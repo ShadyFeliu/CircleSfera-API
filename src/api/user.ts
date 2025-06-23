@@ -30,12 +30,19 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     const { alias } = req.params;
     // Solo campos editables por el usuario
     const allowedFields = [
-      'avatarUrl', 'country', 'city', 'languages', 'age', 'gender', 'interests', 'publicProfile'
+      'avatarUrl', 'country', 'city', 'languages', 'age', 'gender', 'interests', 'publicProfile', 'alias'
     ];
     const updates: Partial<IUser> = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
         (updates as Record<string, unknown>)[field] = req.body[field];
+      }
+    }
+    // Validación de alias único
+    if (updates.alias) {
+      const exists = await User.findOne({ alias: updates.alias, _id: { $ne: (await User.findOne({ alias }))?._id } });
+      if (exists) {
+        return res.status(400).json({ error: 'El nombre de usuario ya está en uso.' });
       }
     }
     const user = await User.findOneAndUpdate(
