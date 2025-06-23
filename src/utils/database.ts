@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { ConnectOptions } from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
@@ -16,7 +16,7 @@ export const connectToDatabase = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       dbName: 'circlesfera',
-    } as any);
+    } as ConnectOptions);
     console.log('✅ Conectado a MongoDB Atlas');
     return mongoose.connection;
   } catch (error) {

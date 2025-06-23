@@ -5,7 +5,6 @@ import { logger } from '../utils/logger';
 export const getMetrics = async (req: Request, res: Response) => {
   try {
     const timeRange = req.query.timeRange || '24h';
-    const now = new Date();
 
     const systemMetrics = monitoring.getMetrics();
 

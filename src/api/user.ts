@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import User from '../models/User';
+import User, { IUser } from '../models/User';
 
 // Crear usuario
 export const createUser = async (req: Request, res: Response) => {
@@ -32,9 +32,11 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     const allowedFields = [
       'avatarUrl', 'country', 'city', 'languages', 'age', 'gender', 'interests', 'publicProfile'
     ];
-    const updates: any = {};
+    const updates: Partial<IUser> = {};
     for (const field of allowedFields) {
-      if (req.body[field] !== undefined) updates[field] = req.body[field];
+      if (req.body[field] !== undefined) {
+        (updates as Record<string, unknown>)[field] = req.body[field];
+      }
     }
     const user = await User.findOneAndUpdate(
       { alias },
