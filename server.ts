@@ -3,6 +3,9 @@ import { Server } from "socket.io";
 import express from 'express';
 import * as dotenv from 'dotenv';
 import { getMetrics } from './src/api/metrics';
+import { connectToDatabase } from './src/utils/database';
+import { createUser, getUserProfile, updateUserProfile, notifyUserEvent } from './src/api/user';
+import User from './src/models/User';
 
 // Load environment variables
 dotenv.config();
@@ -12,6 +15,10 @@ app.use(express.json());
 
 // API Routes
 app.get('/api/metrics', getMetrics);
+app.post('/api/users', createUser);
+app.get('/api/users/:alias', getUserProfile);
+app.put('/api/users/:alias', updateUserProfile);
+app.post('/api/users/:alias/event', notifyUserEvent);
 
 // Basic routes
 app.get('/', (req, res) => {
@@ -55,7 +62,7 @@ const userInterests = new Map<string, string[]>();
 const interestQueues = new Map<string, string[]>();
 const genericQueue: string[] = [];
 
-const findPartnerFor = (socketId: string) => {
+const findPartnerFor = async (socketId: string) => {
   const interests = userInterests.get(socketId) || [];
   let partnerId: string | undefined;
 
@@ -74,8 +81,12 @@ const findPartnerFor = (socketId: string) => {
       cleanUpUserFromQueues(partnerId);
       cleanUpUserFromQueues(socketId);
 
-      io.to(socketId).emit("partner", { id: partnerId, initiator: true });
-      io.to(partnerId).emit("partner", { id: socketId, initiator: false });
+      const [userProfile, partnerProfile] = await Promise.all([
+        User.findOne({ alias: socketId, publicProfile: true }).select('-email -__v'),
+        User.findOne({ alias: partnerId, publicProfile: true }).select('-email -__v'),
+      ]);
+      io.to(socketId).emit("partner", { id: partnerId, initiator: true, profile: partnerProfile });
+      io.to(partnerId).emit("partner", { id: socketId, initiator: false, profile: userProfile });
       return;
     }
   }
@@ -110,8 +121,12 @@ const findPartnerFor = (socketId: string) => {
     
     cleanUpUserFromQueues(partnerId);
 
-    io.to(socketId).emit("partner", { id: partnerId, initiator: true });
-    io.to(partnerId).emit("partner", { id: socketId, initiator: false });
+    const [userProfile, partnerProfile] = await Promise.all([
+      User.findOne({ alias: socketId, publicProfile: true }).select('-email -__v'),
+      User.findOne({ alias: partnerId, publicProfile: true }).select('-email -__v'),
+    ]);
+    io.to(socketId).emit("partner", { id: partnerId, initiator: true, profile: partnerProfile });
+    io.to(partnerId).emit("partner", { id: socketId, initiator: false, profile: userProfile });
   } 
   else {
     log(`Usuario ${socketId} se pone a la espera con intereses:`, interests);
@@ -185,12 +200,10 @@ const checkAutoPairing = () => {
 io.on("connection", (socket) => {
   log(`Usuario conectado: ${socket.id}`);
 
-  socket.on("find_partner", ({ interests }: { interests: string[] }) => {
+  socket.on("find_partner", async ({ interests }: { interests: string[] }) => {
     log('Usuario buscando pareja', { socketId: socket.id, interests });
     userInterests.set(socket.id, interests || []);
-    findPartnerFor(socket.id);
-    
-    // Verificar emparejamiento automático después de buscar pareja
+    await findPartnerFor(socket.id);
     setTimeout(checkAutoPairing, 1000);
   });
   
@@ -222,11 +235,17 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3001;
 
-if (require.main === module) {
-httpServer.listen(PORT, () => {
-    log(`🚀 Servidor de señalización iniciado en puerto ${PORT}`);
-    log(`🌍 CORS configurado para: ${process.env.ALLOWED_ORIGINS || 'dominios por defecto'}`);
-});
-}
+(async () => {
+  try {
+    await connectToDatabase();
+    httpServer.listen(PORT, () => {
+      log(`🚀 Servidor de señalización iniciado en puerto ${PORT}`);
+      log(`🌍 CORS configurado para: ${process.env.ALLOWED_ORIGINS || 'dominios por defecto'}`);
+    });
+  } catch (error) {
+    console.error('No se pudo conectar a la base de datos. El servidor no se iniciará.');
+    process.exit(1);
+  }
+})();
 
 export { httpServer, io };
