@@ -62,6 +62,9 @@ const userInterests = new Map<string, string[]>();
 const interestQueues = new Map<string, string[]>();
 const genericQueue: string[] = [];
 
+// Set global para dispositivos únicos conectados
+const deviceSet = new Set<string>();
+
 const findPartnerFor = async (socketId: string) => {
   const interests = userInterests.get(socketId) || [];
   let partnerId: string | undefined;
@@ -198,7 +201,12 @@ const checkAutoPairing = () => {
 };
 
 io.on("connection", (socket) => {
-  log(`Usuario conectado: ${socket.id}`);
+  const ip = socket.handshake.address;
+  const userAgent = socket.handshake.headers['user-agent'] || '';
+  const deviceId = `${ip}|${userAgent}`;
+  deviceSet.add(deviceId);
+
+  log(`Usuario conectado: ${socket.id} (${deviceId})`);
 
   socket.on("find_partner", async ({ interests }: { interests: string[] }) => {
     log('Usuario buscando pareja', { socketId: socket.id, interests });
@@ -212,13 +220,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on('get_user_count', () => {
-    const count = io.engine.clientsCount;
-    socket.emit('user_count', count);
+    socket.emit('user_count', deviceSet.size);
   });
 
   socket.on("end_chat", () => {
     endChat(socket.id);
-    // Verificar emparejamiento automático después de terminar chat
     setTimeout(checkAutoPairing, 1000);
   });
 
@@ -227,8 +233,7 @@ io.on("connection", (socket) => {
     endChat(socket.id);
     cleanUpUserFromQueues(socket.id);
     userInterests.delete(socket.id);
-    
-    // Verificar emparejamiento automático después de desconexión
+    deviceSet.delete(deviceId);
     setTimeout(checkAutoPairing, 1000);
   });
 });
