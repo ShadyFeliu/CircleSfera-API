@@ -69,15 +69,17 @@ const findPartnerFor = async (socketId: string) => {
   const interests = userInterests.get(socketId) || [];
   let partnerId: string | undefined;
 
-  // Verificar si hay exactamente 2 personas conectadas para emparejamiento automático
-  const totalUsers = io.engine.clientsCount;
-  if (totalUsers === 2) {
+  // Verificar si hay exactamente 2 dispositivos únicos conectados para emparejamiento automático
+  const totalDevices = deviceSet.size;
+  const totalSockets = io.engine.clientsCount;
+  log(`[Emparejamiento] Dispositivos únicos: ${totalDevices}, Sockets activos: ${totalSockets}`);
+  if (totalDevices === 2) {
     // Buscar la otra persona que no esté emparejada
     const allSockets = Array.from(io.sockets.sockets.keys());
     partnerId = allSockets.find(id => id !== socketId && !userPairs.has(id));
     
     if (partnerId) {
-      log(`Emparejamiento automático: ${socketId} y ${partnerId} (2 usuarios totales)`);
+      log(`Emparejamiento automático: ${socketId} y ${partnerId} (2 dispositivos únicos)`);
       userPairs.set(socketId, partnerId);
       userPairs.set(partnerId, socketId);
       
@@ -178,15 +180,16 @@ const endChat = (socketId: string) => {
 
 // Función para verificar emparejamiento automático de usuarios sin emparejar
 const checkAutoPairing = () => {
-  const totalUsers = io.engine.clientsCount;
-  
-  if (totalUsers === 2) {
+  const totalDevices = deviceSet.size;
+  const totalSockets = io.engine.clientsCount;
+  log(`[AutoPairing] Dispositivos únicos: ${totalDevices}, Sockets activos: ${totalSockets}`);
+  if (totalDevices === 2) {
     const allSockets = Array.from(io.sockets.sockets.keys());
     const unpairedUsers = allSockets.filter(id => !userPairs.has(id));
     
     if (unpairedUsers.length === 2) {
       const [user1, user2] = unpairedUsers;
-      log(`Emparejamiento automático detectado: ${user1} y ${user2}`);
+      log(`Emparejamiento automático detectado: ${user1} y ${user2} (2 dispositivos únicos)`);
       
       userPairs.set(user1, user2);
       userPairs.set(user2, user1);
