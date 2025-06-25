@@ -40,6 +40,7 @@ jobs:
           heroku --version
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
+          git config pull.rebase false
           git remote add heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
           git fetch heroku
           git pull heroku main --allow-unrelated-histories || true
