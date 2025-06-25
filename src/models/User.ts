@@ -27,6 +27,7 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   publicProfile: boolean;
+  telefono?: string;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -54,6 +55,7 @@ const UserSchema = new Schema<IUser>({
   connectionQuality: { type: String, enum: ['excellent', 'good', 'poor'] },
   isVerified: { type: Boolean, default: false },
   publicProfile: { type: Boolean, default: true },
+  telefono: { type: String },
 }, {
   timestamps: true
 });

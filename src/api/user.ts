@@ -46,11 +46,30 @@ export const updateUserProfile = async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'El nombre de usuario ya está en uso.' });
       }
     }
+    // Validación de email único y formato
+    if (updates.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(updates.email as string)) {
+        return res.status(400).json({ error: 'Formato de email inválido.' });
+      }
+      const exists = await User.findOne({ email: (updates.email as string).toLowerCase(), _id: { $ne: (await User.findOne({ alias: { $regex: `^${alias}$`, $options: 'i' } }))?._id } });
+      if (exists) {
+        return res.status(400).json({ error: 'El email ya está en uso.' });
+      }
+      updates.email = (updates.email as string).toLowerCase();
+    }
+    // Validación de teléfono (opcional, solo números y +, -, espacios)
+    if (updates.telefono) {
+      const phoneRegex = /^[+\d\s-]{7,20}$/;
+      if (!phoneRegex.test(updates.telefono as string)) {
+        return res.status(400).json({ error: 'Formato de teléfono inválido.' });
+      }
+    }
     const user = await User.findOneAndUpdate(
       { alias: { $regex: `^${alias}$`, $options: 'i' } },
       { $set: updates },
       { new: true, runValidators: true }
-    ).select('-email -__v');
+    ).select('-__v'); // <-- Mostrar email y telefono
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(user);
   } catch (error) {
