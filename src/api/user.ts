@@ -30,7 +30,8 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     const { alias } = req.params;
     // Solo campos editables por el usuario
     const allowedFields = [
-      'avatarUrl', 'country', 'city', 'languages', 'age', 'gender', 'interests', 'publicProfile', 'alias'
+      'avatarUrl', 'country', 'city', 'languages', 'age', 'gender', 'interests', 'publicProfile', 'alias',
+      'nombre', 'email', 'telefono'
     ];
     const updates: Partial<IUser> = {};
     for (const field of allowedFields) {
