@@ -1,8 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
+  username: string;
   alias: string;
-  email?: string;
+  email: string;
+  password: string;
+  nombre: string;
   avatarUrl?: string;
   country?: string;
   city?: string;
@@ -27,8 +30,11 @@ export interface IUser extends Document {
 }
 
 const UserSchema = new Schema<IUser>({
-  alias: { type: String, required: true },
-  email: { type: String, unique: true, sparse: true },
+  username: { type: String, required: true, unique: true },
+  alias: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  nombre: { type: String, required: true },
   avatarUrl: String,
   country: String,
   city: String,
@@ -40,7 +46,7 @@ const UserSchema = new Schema<IUser>({
     totalChats: { type: Number, default: 0 },
     achievements: [String],
     ranking: Number,
-    totalTime: Number,
+    totalTime: { type: Number, default: 0 },
     countriesVisited: [String],
     favoriteInterests: [String],
   },

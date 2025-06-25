@@ -5,6 +5,7 @@ import * as dotenv from 'dotenv';
 import { getMetrics } from './src/api/metrics';
 import { connectToDatabase } from './src/utils/database';
 import { createUser, getUserProfile, updateUserProfile, notifyUserEvent } from './src/api/user';
+import { register, login, verifyToken, getProfile } from './src/api/auth';
 import User from './src/models/User';
 
 // Load environment variables
@@ -19,6 +20,11 @@ app.post('/api/users', createUser);
 app.get('/api/users/:alias', getUserProfile);
 app.put('/api/users/:alias', updateUserProfile);
 app.post('/api/users/:alias/event', notifyUserEvent);
+
+// Auth Routes
+app.post('/api/auth/register', register);
+app.post('/api/auth/login', login);
+app.get('/api/auth/profile', verifyToken, getProfile);
 
 // Basic routes
 app.get('/', (req, res) => {
