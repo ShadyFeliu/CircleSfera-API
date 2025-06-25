@@ -21,6 +21,16 @@ app.get('/api/users/:alias', getUserProfile);
 app.put('/api/users/:alias', updateUserProfile);
 app.post('/api/users/:alias/event', notifyUserEvent);
 
+// Rutas alias para compatibilidad con el frontend (username = alias)
+app.get('/api/user/:username', (req, res, next) => {
+  req.params.alias = req.params.username;
+  next();
+}, getUserProfile);
+app.put('/api/user/:username', (req, res, next) => {
+  req.params.alias = req.params.username;
+  next();
+}, updateUserProfile);
+
 // Auth Routes
 app.post('/api/auth/register', register);
 app.post('/api/auth/login', login);
