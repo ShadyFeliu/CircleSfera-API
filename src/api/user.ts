@@ -12,11 +12,11 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
-// Obtener perfil público de usuario por alias
+// Obtener perfil público de usuario por alias (case-insensitive)
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
     const { alias } = req.params;
-    const user = await User.findOne({ alias, publicProfile: true }).select('-email -__v');
+    const user = await User.findOne({ alias: { $regex: `^${alias}$`, $options: 'i' }, publicProfile: true }).select('-email -__v');
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado o perfil privado' });
     res.json(user);
   } catch (error) {
@@ -24,7 +24,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
   }
 };
 
-// Actualizar perfil de usuario (solo campos permitidos)
+// Actualizar perfil de usuario (case-insensitive)
 export const updateUserProfile = async (req: Request, res: Response) => {
   try {
     const { alias } = req.params;
@@ -41,13 +41,13 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     }
     // Validación de alias único
     if (updates.alias) {
-      const exists = await User.findOne({ alias: updates.alias, _id: { $ne: (await User.findOne({ alias }))?._id } });
+      const exists = await User.findOne({ alias: updates.alias, _id: { $ne: (await User.findOne({ alias: { $regex: `^${alias}$`, $options: 'i' } }))?._id } });
       if (exists) {
         return res.status(400).json({ error: 'El nombre de usuario ya está en uso.' });
       }
     }
     const user = await User.findOneAndUpdate(
-      { alias },
+      { alias: { $regex: `^${alias}$`, $options: 'i' } },
       { $set: updates },
       { new: true, runValidators: true }
     ).select('-email -__v');
