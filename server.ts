@@ -64,6 +64,8 @@ const genericQueue: string[] = [];
 
 // Set global para dispositivos únicos conectados
 const deviceSet = new Set<string>();
+// Map para almacenar deviceId por socket
+const socketToDeviceId = new Map<string, string>();
 
 const findPartnerFor = async (socketId: string) => {
   const interests = userInterests.get(socketId) || [];
@@ -224,14 +226,14 @@ function cleanUpUserFromAllQueues(socketId: string) {
 }
 
 io.on("connection", (socket) => {
-  let deviceId: string;
   let ip = socket.handshake.address;
   let userAgent = socket.handshake.headers['user-agent'] || '';
 
   socket.on("find_partner", async ({ interests, deviceId: clientDeviceId }: { interests: string[]; deviceId?: string }) => {
-    deviceId = clientDeviceId || `${ip}|${userAgent}`;
+    const deviceId = clientDeviceId || `${ip}|${userAgent}`;
+    socketToDeviceId.set(socket.id, deviceId);
     deviceSet.add(deviceId);
-    log(`[Conexión] deviceId añadido: ${deviceId}`);
+    log(`[Conexión] deviceId añadido: ${deviceId} para socket ${socket.id}`);
     logEstadoEmparejamiento('find_partner');
     userInterests.set(socket.id, interests || []);
     await findPartnerFor(socket.id);
@@ -259,10 +261,15 @@ io.on("connection", (socket) => {
     log(`Usuario desconectado: ${socket.id}`);
     endChat(socket.id);
     cleanUpUserFromAllQueues(socket.id);
+    
+    // Limpiar deviceId del socket desconectado
+    const deviceId = socketToDeviceId.get(socket.id);
     if (deviceId) {
       deviceSet.delete(deviceId);
-      log(`[Desconexión] deviceId eliminado: ${deviceId}`);
+      socketToDeviceId.delete(socket.id);
+      log(`[Desconexión] deviceId eliminado: ${deviceId} del socket ${socket.id}`);
     }
+    
     logEstadoEmparejamiento('disconnect');
     setTimeout(checkAutoPairing, 1000);
   });
