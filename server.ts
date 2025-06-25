@@ -203,40 +203,67 @@ const checkAutoPairing = () => {
   }
 };
 
+function logEstadoEmparejamiento(contexto = '') {
+  log(`[${contexto}] Estado actual:`);
+  log(`  deviceSet: ${Array.from(deviceSet).join(', ')}`);
+  log(`  userPairs: ${JSON.stringify(Array.from(userPairs.entries()))}`);
+  log(`  interestQueues: ${JSON.stringify(Array.from(interestQueues.entries()))}`);
+  log(`  genericQueue: ${JSON.stringify(genericQueue)}`);
+  log(`  userInterests: ${JSON.stringify(Array.from(userInterests.entries()))}`);
+}
+
+function cleanUpUserFromAllQueues(socketId: string) {
+  userPairs.delete(socketId);
+  for (const queue of interestQueues.values()) {
+    const idx = queue.indexOf(socketId);
+    if (idx !== -1) queue.splice(idx, 1);
+  }
+  const idxGen = genericQueue.indexOf(socketId);
+  if (idxGen !== -1) genericQueue.splice(idxGen, 1);
+  userInterests.delete(socketId);
+}
+
 io.on("connection", (socket) => {
-  const ip = socket.handshake.address;
-  const userAgent = socket.handshake.headers['user-agent'] || '';
-  const deviceId = `${ip}|${userAgent}`;
-  deviceSet.add(deviceId);
+  let deviceId: string;
+  let ip = socket.handshake.address;
+  let userAgent = socket.handshake.headers['user-agent'] || '';
 
-  log(`Usuario conectado: ${socket.id} (${deviceId})`);
-
-  socket.on("find_partner", async ({ interests }: { interests: string[] }) => {
-    log('Usuario buscando pareja', { socketId: socket.id, interests });
+  socket.on("find_partner", async ({ interests, deviceId: clientDeviceId }: { interests: string[]; deviceId?: string }) => {
+    deviceId = clientDeviceId || `${ip}|${userAgent}`;
+    deviceSet.add(deviceId);
+    log(`[Conexión] deviceId añadido: ${deviceId}`);
+    logEstadoEmparejamiento('find_partner');
     userInterests.set(socket.id, interests || []);
     await findPartnerFor(socket.id);
     setTimeout(checkAutoPairing, 1000);
   });
-  
+
   socket.on("signal", (data) => {
     io.to(data.to).emit("signal", { from: socket.id, signal: data.signal });
   });
 
   socket.on('get_user_count', () => {
     socket.emit('user_count', deviceSet.size);
+    log(`[Contador] deviceSet actual: ${Array.from(deviceSet).join(', ')}`);
+    logEstadoEmparejamiento('get_user_count');
   });
 
   socket.on("end_chat", () => {
     endChat(socket.id);
+    cleanUpUserFromAllQueues(socket.id);
+    logEstadoEmparejamiento('end_chat');
     setTimeout(checkAutoPairing, 1000);
   });
 
   socket.on("disconnect", () => {
     log(`Usuario desconectado: ${socket.id}`);
     endChat(socket.id);
-    cleanUpUserFromQueues(socket.id);
-    userInterests.delete(socket.id);
-    deviceSet.delete(deviceId);
+    cleanUpUserFromAllQueues(socket.id);
+    if (deviceId) {
+      deviceSet.delete(deviceId);
+      log(`[Desconexión] deviceId eliminado: ${deviceId}`);
+    }
+    logEstadoEmparejamiento('disconnect');
     setTimeout(checkAutoPairing, 1000);
   });
 });
