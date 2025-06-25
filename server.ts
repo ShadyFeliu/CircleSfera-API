@@ -257,7 +257,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("signal", (data) => {
+    log(`[SIGNAL] Recibido de ${socket.id} para ${data.to}. Contenido:`, data.signal);
     io.to(data.to).emit("signal", { from: socket.id, signal: data.signal });
+    log(`[SIGNAL] Reenviado a ${data.to} desde ${socket.id}`);
   });
 
   socket.on('get_user_count', () => {
