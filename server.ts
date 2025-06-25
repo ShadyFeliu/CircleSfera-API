@@ -226,8 +226,8 @@ function cleanUpUserFromAllQueues(socketId: string) {
 }
 
 io.on("connection", (socket) => {
-  let ip = socket.handshake.address;
-  let userAgent = socket.handshake.headers['user-agent'] || '';
+  const ip = socket.handshake.address;
+  const userAgent = socket.handshake.headers['user-agent'] || '';
 
   socket.on("find_partner", async ({ interests, deviceId: clientDeviceId }: { interests: string[]; deviceId?: string }) => {
     const deviceId = clientDeviceId || `${ip}|${userAgent}`;
